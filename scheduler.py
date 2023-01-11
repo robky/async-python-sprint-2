@@ -7,9 +7,8 @@ from logger_set import get_logger
 from collections import deque
 from dataclasses import dataclass, field
 from queue import Queue
-from time import sleep
 from typing import Optional, Set
-from functions.func_os import fake_func, fake_forever
+from functions.func_fake import fake_func, fake_forever
 
 from job import Job
 
@@ -34,10 +33,10 @@ class Scheduler:
                 return
         if self._queue.qsize() < self.pool_size:
             self._queue.put(job)
-            logger.debug(f"Add {job} in queue")
+            # logger.debug(f"Add {job} in queue")
             return
         self._buffer.append(job)
-        logger.debug(f"Add {job} in buffer")
+        # logger.debug(f"Add {job} in buffer")
 
     def _get_job(self) -> Optional[Job]:
         if self._queue.empty():
@@ -74,9 +73,6 @@ class Scheduler:
         if job.is_can_run():
             logger.debug(f"run {job}")
             job.run()
-        # else:
-        #     if job.is_dependencies():
-        #         self._check_dependencies(job)
         if job.is_worked():
             self._set_job(job)
         else:
@@ -88,20 +84,17 @@ class Scheduler:
     def run(self):
         yield
         while self._worked:
-            print(
-                [f"{job.id}({job.status})" for job in self._queue.queue],
-                end="-",
-            )
-            print([f"{job.id}({job.status})" for job in self._buffer],
-                  end=" ")
-
-            print([id for id in self._end_jobs], end=" ")
-            print([id for id in self._wrong_jobs])
+            # print(
+            #     [f"{job.id}({job.status})" for job in self._queue.queue],
+            #     end="-",
+            # )
+            # print([f"{job.id}({job.status})" for job in self._buffer],
+            #       end=" ")
+            #
+            # print([id for id in self._end_jobs], end=" ")
+            # print([id for id in self._wrong_jobs])
 
             job = self._get_job()
-            # if job is None:
-            #     logger.debug("Stop")
-            #     return
             if job:
                 self._process(job)
             else:
@@ -114,20 +107,17 @@ class Scheduler:
             self._load()
             self._worked = True
             logger.info("Scheduler start")
-            # load from file
 
     def restart(self):
         self.stop()
         self.start()
         logger.info("Scheduler restart")
-        # stop and start
 
     def stop(self):
         if self._worked:
             self._worked = False
             logger.info("Scheduler stop")
             self._save()
-        # остановка, паркуем job и записываем в файл
 
     def _save(self) -> None:
         if self._queue.empty():
@@ -148,7 +138,7 @@ class Scheduler:
 
         data_json = {
             "end_jobs": self._end_jobs,
-            "wrong_jobs": self._wrong_jobs
+            "wrong_jobs": self._wrong_jobs,
         }
         with open("jobs_json.lock", "w") as write_file:
             json.dump(data_json, write_file, cls=SchedulerEncoder)
@@ -161,7 +151,7 @@ class Scheduler:
                 job_list = json.load(read_file, cls=SchedulerDecoder)
             for job in job_list:
                 self._queue.put(job)
-            remove('queue_json.lock')
+            remove("queue_json.lock")
 
         if path.exists("buffer_json.lock"):
             self._buffer = deque()
@@ -169,14 +159,14 @@ class Scheduler:
                 job_list = json.load(read_file, cls=SchedulerDecoder)
             for job in job_list:
                 self._buffer.append(job)
-            remove('buffer_json.lock')
+            remove("buffer_json.lock")
 
         if path.exists("jobs_json.lock"):
             with open("jobs_json.lock", "r") as read_file:
                 result = json.load(read_file, cls=SchedulerDecoder)
             self._end_jobs = set(result[0])
             self._wrong_jobs = set(result[1])
-            remove('jobs_json.lock')
+            remove("jobs_json.lock")
 
         logger.debug("Lock file not found")
 
@@ -211,10 +201,6 @@ class SchedulerDecoder(json.JSONDecoder):
         super().__init__(object_hook=self.object_hook, *args, **kwargs)
 
     def object_hook(self, obj):
-        """
-        data_json["end_jobs"] = self._end_jobs
-        data_json["wrong_jobs"] = self._wrong_jobs
-        """
         if "job_id" in obj:
             start_at = None
             if obj["start_at"]:

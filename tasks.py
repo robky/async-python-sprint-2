@@ -8,12 +8,10 @@ from typing import Generator, Optional
 from logger_set import get_logger
 from job import Job
 from scheduler import Scheduler
-from functions.func_os import create_dir, delete_dir, fake_func, fake_forever
+from functions.func_os import create_dir, delete_dir, rename_dir
+from functions.func_fake import fake_func, fake_forever
 
-FUNC_GALLERY = (
-    fake_func,
-    fake_forever
-)
+FUNC_GALLERY = (fake_func, fake_forever)
 
 
 def get_new_number() -> Generator[int, None, None]:
@@ -49,7 +47,7 @@ def get_task(queue: Queue) -> Generator[Optional[Job], None, None]:
             yield None
 
 
-def main() -> None:
+def test_fake_funk() -> None:
     logger = get_logger("tasks")
     logger.info("Start work")
 
@@ -68,7 +66,7 @@ def main() -> None:
         task_count = randint(5, 20)
         task_factory(task_queue, coroutine_number, task_count)
         task_flag = True
-        print(*[q for q in task_queue.queue], sep="\n")
+        # print(*[q for q in task_queue.queue], sep="\n")
         while time_stop > datetime.now():
             if task_flag:
                 task = next(coroutine_task)
@@ -88,8 +86,41 @@ def main() -> None:
             scheduler.restart()
 
     scheduler.stop()
-    logger.info("- - - End work - - -")
+    logger.info("End work")
 
 
 if __name__ == "__main__":
-    main()
+    # test_fake_funk()
+
+    scheduler = Scheduler(3)
+    scheduler.start()
+    coroutine_scheduler = scheduler.run()
+
+    scheduler.schedule(
+        Job(
+            id=2,
+            func=partial(rename_dir, "name_folder", "new_name_folder"),
+            dependencies=[1],
+        )
+    )
+    scheduler.schedule(
+        Job(
+            id=3,
+            func=partial(delete_dir, "new_name_folder"),
+            dependencies=[1, 2]
+        )
+    )
+    scheduler.schedule(
+        Job(
+            id=1,
+            func=partial(create_dir, "name_folder"),
+        )
+    )
+    while True:
+        try:
+            next(coroutine_scheduler)
+        except StopIteration:
+            break
+        sleep(0.1)
+
+    scheduler.stop()

@@ -61,9 +61,6 @@ class Job:
     def status_pause(self):
         self.status = STATUS_PAUSE
 
-    # def status_run(self):
-    #     self.status = STATUS_RUN
-
     def status_stop(self):
         self.status = STATUS_STOPPED
 
@@ -113,4 +110,3 @@ class Job:
 
     def is_done(self) -> bool:
         return self.status == STATUS_DONE
-
