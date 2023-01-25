@@ -5,10 +5,13 @@ from time import sleep
 from queue import Queue
 from typing import Generator, Optional
 
+from functions.func_file import write_file, read_file
+from functions.func_rest import get_users_delay, get_cats
 from logger_set import get_logger
 from job import Job
 from scheduler import Scheduler
-from functions.func_os import create_dir, delete_dir, rename_dir
+from functions.func_os import (create_dir, delete_dir, rename, create_file,
+                               delete_file)
 from functions.func_fake import fake_func, fake_forever
 
 FUNC_GALLERY = (fake_func, fake_forever)
@@ -89,9 +92,7 @@ def test_fake_funk() -> None:
     logger.info("End work")
 
 
-if __name__ == "__main__":
-    # test_fake_funk()
-
+def test_os_funk() -> None:
     scheduler = Scheduler(3)
     scheduler.start()
     coroutine_scheduler = scheduler.run()
@@ -99,7 +100,7 @@ if __name__ == "__main__":
     scheduler.schedule(
         Job(
             id=2,
-            func=partial(rename_dir, "name_folder", "new_name_folder"),
+            func=partial(rename, "name_folder", "new_name_folder"),
             dependencies=[1],
         )
     )
@@ -116,6 +117,26 @@ if __name__ == "__main__":
             func=partial(create_dir, "name_folder"),
         )
     )
+    scheduler.schedule(
+        Job(
+            id=5,
+            func=partial(create_file, "name_file"),
+        )
+    )
+    scheduler.schedule(
+        Job(
+            id=6,
+            func=partial(delete_file, "new_name_file"),
+            dependencies=[5, 4]
+        )
+    )
+    scheduler.schedule(
+        Job(
+            id=4,
+            func=partial(rename, "name_file", "new_name_file"),
+            dependencies=[5]
+        )
+    )
     while True:
         try:
             next(coroutine_scheduler)
@@ -124,3 +145,75 @@ if __name__ == "__main__":
         sleep(0.1)
 
     scheduler.stop()
+
+
+def test_file_funk():
+    scheduler = Scheduler()
+    scheduler.start()
+    coroutine_scheduler = scheduler.run()
+
+    text = []
+    for _ in range(randint(3, 10)):
+        line = []
+        for __ in range(randint(3, 9)):
+            line.append(''.join(
+                [chr(randint(97, 122)) for ___ in range(randint(3, 7))]))
+        text.append(' '.join(line))
+
+    scheduler.schedule(
+        Job(
+            id=1,
+            func=partial(write_file, text),
+        )
+    )
+    scheduler.schedule(
+        Job(
+            id=2,
+            func=read_file,
+            dependencies=[1]
+        )
+    )
+    while True:
+        try:
+            next(coroutine_scheduler)
+        except StopIteration:
+            break
+        sleep(0.1)
+    scheduler.stop()
+
+
+def test_rest():
+    scheduler = Scheduler()
+    scheduler.start()
+    coroutine_scheduler = scheduler.run()
+
+    time = randint(1, 5)
+    scheduler.schedule(
+        Job(
+            id=1,
+            func=partial(get_users_delay, time),
+        )
+    )
+
+    cats = randint(1, 15)
+    scheduler.schedule(
+        Job(
+            id=2,
+            func=partial(get_cats, cats),
+        )
+    )
+
+    while True:
+        try:
+            next(coroutine_scheduler)
+        except StopIteration:
+            break
+        sleep(0.1)
+    scheduler.stop()
+
+
+if __name__ == "__main__":
+    # test_fake_funk()
+    # test_os_funk()
+    # test_file_funk()
+    test_rest()
