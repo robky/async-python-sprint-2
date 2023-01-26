@@ -10,8 +10,10 @@ def get_users_delay(time: int = 1) -> Generator[str, None, None]:
         users = response.json().get("data")
         if users:
             for user in users:
-                yield (f"Get user {user.get('first_name')} "
-                       f"{user.get('last_name')}")
+                yield (
+                    f"Get user {user.get('first_name')} "
+                    f"{user.get('last_name')}"
+                )
 
 
 def get_cats(number: int = 10) -> Generator[str, None, None]:

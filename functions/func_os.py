@@ -29,7 +29,7 @@ def rename(old_name: str, new_name: str) -> Generator[str, None, None]:
 
 def create_file(name: str) -> Generator[str, None, None]:
     if not os.path.exists(name):
-        with open(name, 'x'):
+        with open(name, "x"):
             pass
         yield f"file {name} is create"
     else:

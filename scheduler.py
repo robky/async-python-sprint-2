@@ -8,7 +8,6 @@ from collections import deque
 from dataclasses import dataclass, field
 from queue import Queue
 from typing import Optional, Set
-from functions.func_fake import fake_func, fake_forever
 
 from job import Job
 
@@ -33,10 +32,8 @@ class Scheduler:
                 return
         if self._queue.qsize() < self.pool_size:
             self._queue.put(job)
-            # logger.debug(f"Add {job} in queue")
             return
         self._buffer.append(job)
-        # logger.debug(f"Add {job} in buffer")
 
     def _get_job(self) -> Optional[Job]:
         if self._queue.empty():
@@ -84,16 +81,6 @@ class Scheduler:
     def run(self):
         yield
         while self._worked:
-            # print(
-            #     [f"{job.id}({job.status})" for job in self._queue.queue],
-            #     end="-",
-            # )
-            # print([f"{job.id}({job.status})" for job in self._buffer],
-            #       end=" ")
-            #
-            # print([id for id in self._end_jobs], end=" ")
-            # print([id for id in self._wrong_jobs])
-
             job = self._get_job()
             if job:
                 self._process(job)
@@ -118,6 +105,11 @@ class Scheduler:
             self._worked = False
             logger.info("Scheduler stop")
             self._save()
+
+    def do_break(self):
+        if self._worked:
+            self._worked = False
+            logger.info("Scheduler break")
 
     def _save(self) -> None:
         if self._queue.empty():
@@ -169,6 +161,13 @@ class Scheduler:
             remove("jobs_json.lock")
 
         logger.debug("Lock file not found")
+
+    def is_end_task(self, id: int) -> bool | None:
+        if id in self._end_jobs:
+            return True
+        if id in self._wrong_jobs:
+            return False
+        return
 
 
 class SchedulerEncoder(json.JSONEncoder):

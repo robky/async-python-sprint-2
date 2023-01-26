@@ -10,8 +10,13 @@ from functions.func_rest import get_users_delay, get_cats
 from logger_set import get_logger
 from job import Job
 from scheduler import Scheduler
-from functions.func_os import (create_dir, delete_dir, rename, create_file,
-                               delete_file)
+from functions.func_os import (
+    create_dir,
+    delete_dir,
+    rename,
+    create_file,
+    delete_file,
+)
 from functions.func_fake import fake_func, fake_forever
 
 FUNC_GALLERY = (fake_func, fake_forever)
@@ -69,7 +74,6 @@ def test_fake_funk() -> None:
         task_count = randint(5, 20)
         task_factory(task_queue, coroutine_number, task_count)
         task_flag = True
-        # print(*[q for q in task_queue.queue], sep="\n")
         while time_stop > datetime.now():
             if task_flag:
                 task = next(coroutine_task)
@@ -108,7 +112,7 @@ def test_os_funk() -> None:
         Job(
             id=3,
             func=partial(delete_dir, "new_name_folder"),
-            dependencies=[1, 2]
+            dependencies=[1, 2],
         )
     )
     scheduler.schedule(
@@ -127,14 +131,14 @@ def test_os_funk() -> None:
         Job(
             id=6,
             func=partial(delete_file, "new_name_file"),
-            dependencies=[5, 4]
+            dependencies=[5, 4],
         )
     )
     scheduler.schedule(
         Job(
             id=4,
             func=partial(rename, "name_file", "new_name_file"),
-            dependencies=[5]
+            dependencies=[5],
         )
     )
     while True:
@@ -156,9 +160,12 @@ def test_file_funk():
     for _ in range(randint(3, 10)):
         line = []
         for __ in range(randint(3, 9)):
-            line.append(''.join(
-                [chr(randint(97, 122)) for ___ in range(randint(3, 7))]))
-        text.append(' '.join(line))
+            line.append(
+                "".join(
+                    [chr(randint(97, 122)) for ___ in range(randint(3, 7))]
+                )
+            )
+        text.append(" ".join(line))
 
     scheduler.schedule(
         Job(
@@ -166,13 +173,7 @@ def test_file_funk():
             func=partial(write_file, text),
         )
     )
-    scheduler.schedule(
-        Job(
-            id=2,
-            func=read_file,
-            dependencies=[1]
-        )
-    )
+    scheduler.schedule(Job(id=2, func=read_file, dependencies=[1]))
     while True:
         try:
             next(coroutine_scheduler)
@@ -213,7 +214,7 @@ def test_rest():
 
 
 if __name__ == "__main__":
-    # test_fake_funk()
-    # test_os_funk()
-    # test_file_funk()
+    test_fake_funk()
+    test_os_funk()
+    test_file_funk()
     test_rest()
