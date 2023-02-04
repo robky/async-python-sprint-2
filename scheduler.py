@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from queue import Queue
 from typing import Optional, Set
 
-from job import Job
+from job import Job, Status
 
 logger = get_logger(__name__)
 
@@ -24,9 +24,6 @@ class Scheduler:
     _worked: bool = False
 
     def schedule(self, job: Job) -> None:
-        self._set_job(job)
-
-    def _set_job(self, job: Job) -> None:
         if job.dependencies:
             if not self._check_dependencies(job):
                 return
@@ -51,7 +48,7 @@ class Scheduler:
             for dependence in temp:
                 if dependence in self._wrong_jobs:
                     self._wrong_jobs.add(job.id)
-                    job.status_stop()
+                    job.status = Status.stopped
                     logger.info(f"Wrong dependence id:{job.id}")
                     return False
                 if dependence not in self._end_jobs:
@@ -59,10 +56,10 @@ class Scheduler:
             if len(temp) != len(new_dependencies):
                 job.dependencies = new_dependencies
                 if new_dependencies:
-                    job.status_not_ready()
+                    job.status = Status.not_ready
                     logger.debug(f"Status not ready {job}")
                 else:
-                    job.status_none()
+                    job.status = Status.none
                     logger.debug(f"Change status none {job}")
         return True
 
@@ -71,7 +68,7 @@ class Scheduler:
             logger.debug(f"run {job}")
             job.run()
         if job.is_worked():
-            self._set_job(job)
+            self.schedule(job)
         else:
             if job.is_done():
                 self._end_jobs.add(job.id)

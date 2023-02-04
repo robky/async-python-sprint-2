@@ -1,3 +1,5 @@
+from enum import Enum
+
 from logger_set import get_logger
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -5,12 +7,15 @@ from typing import List, Callable, Optional
 
 
 logger = get_logger(__name__)
-STATUS_NONE = 0
-STATUS_NOT_READY = 1
-STATUS_PAUSE = 2
-STATUS_RUN = 5
-STATUS_DONE = 10
-STATUS_STOPPED = 20
+
+
+class Status(Enum):
+    none = 0
+    not_ready = 1
+    pause = 2
+    run = 5
+    done = 10
+    stopped = 20
 
 
 @dataclass
@@ -21,11 +26,11 @@ class Job:
     max_working_time: int = -1
     tries: int = 0
     dependencies: List[int] = field(default_factory=list)
-    status: int = field(init=False)
+    status: Enum = field(init=False)
 
     def __post_init__(self):
         self.coroutine = self.func()
-        self.status_none()
+        self.status = Status.none
 
     def run(self) -> bool:
         try:
@@ -33,7 +38,7 @@ class Job:
             logger.info(f"job id:{self.id}, get result: {result}")
         except StopIteration:
             logger.debug(f"job id:{self.id} {id(self)}, finished")
-            self.status = STATUS_DONE
+            self.status = Status.done
             return False
         return True
 
@@ -41,49 +46,38 @@ class Job:
         if self.tries > 0:
             self.tries -= 1
             self.coroutine = self.func()
-            self.status = STATUS_RUN
+            self.status = Status.run
             self.start_at = datetime.now()
             logger.info(
                 f"job id:{self.id}, restarted, tries counter:{self.tries}"
             )
             return True
-        else:
-            self.status = STATUS_STOPPED
-            logger.info(f"job id:{self.id}, stopped")
-            return False
-
-    def status_none(self):
-        self.status = STATUS_NONE
-
-    def status_not_ready(self):
-        self.status = STATUS_NOT_READY
-
-    def status_pause(self):
-        self.status = STATUS_PAUSE
-
-    def status_stop(self):
-        self.status = STATUS_STOPPED
+        self.status = Status.stopped
+        logger.info(f"job id:{self.id}, stopped")
+        return False
 
     def is_can_run(self) -> bool:
-        if self.status == STATUS_RUN:
-            if self.max_working_time > 0:
-                if not self.start_at:
-                    self.start_at = datetime.now()
-                time = self.start_at + timedelta(seconds=self.max_working_time)
-                if time <= datetime.now():
-                    return self.restart()
-            return True
-        elif self.status == STATUS_NONE:
-            if all([self._is_it_time(), self._is_dependencies_done()]):
-                self.status = STATUS_RUN
+        match self.status:
+            case Status.run:
+                if self.max_working_time > 0:
+                    if not self.start_at:
+                        self.start_at = datetime.now()
+                    time = self.start_at + timedelta(
+                        seconds=self.max_working_time)
+                    if time <= datetime.now():
+                        return self.restart()
                 return True
-            return False
-        elif self.status == STATUS_PAUSE:
-            if self._is_it_time():
-                self.status = STATUS_NONE
-                self.start_at = None
-                logger.debug(f"time start job id:{self.id} {id(self)}")
-                return True
+            case Status.none:
+                if all([self._is_it_time(), self._is_dependencies_done()]):
+                    self.status = Status.run
+                    return True
+                return False
+            case Status.pause:
+                if self._is_it_time():
+                    self.status = Status.none
+                    self.start_at = None
+                    logger.debug(f"time start job id:{self.id} {id(self)}")
+                    return True
         return False
 
     def _is_it_time(self) -> bool:
@@ -91,22 +85,22 @@ class Job:
             return True
         if self.start_at <= datetime.now():
             return True
-        if self.status != STATUS_PAUSE:
-            self.status_pause()
+        if self.status != Status.pause:
+            self.status = Status.pause
             logger.debug(f"not time job id:{self.id} {id(self)}")
         return False
 
     def _is_dependencies_done(self) -> bool:
         if self.dependencies:
-            self.status_not_ready()
+            self.status = Status.not_ready
             return False
         return True
 
     def is_dependencies(self) -> bool:
-        return self.status == STATUS_NOT_READY
+        return self.status == Status.not_ready
 
     def is_worked(self) -> bool:
-        return self.status not in [STATUS_DONE, STATUS_STOPPED]
+        return self.status not in [Status.done, Status.stopped]
 
     def is_done(self) -> bool:
-        return self.status == STATUS_DONE
+        return self.status == Status.done
