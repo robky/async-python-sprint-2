@@ -136,26 +136,38 @@ class Scheduler:
     def _load(self) -> None:
         if path.exists("queue_json.lock"):
             self._queue = Queue(self.pool_size)
-            with open("queue_json.lock", "r") as read_file:
-                job_list = json.load(read_file, cls=SchedulerDecoder)
-            for job in job_list:
-                self._queue.put(job)
-            remove("queue_json.lock")
+            try:
+                with open("queue_json.lock", "r") as read_file:
+                    job_list = json.load(read_file, cls=SchedulerDecoder)
+                for job in job_list:
+                    self._queue.put(job)
+                remove("queue_json.lock")
+            except Exception as err:
+                logger.error(f"Unexpected {err=}, {type(err)=}")
+                raise
 
         if path.exists("buffer_json.lock"):
             self._buffer = deque()
-            with open("buffer_json.lock", "r") as read_file:
-                job_list = json.load(read_file, cls=SchedulerDecoder)
-            for job in job_list:
-                self._buffer.append(job)
-            remove("buffer_json.lock")
+            try:
+                with open("buffer_json.lock", "r") as read_file:
+                    job_list = json.load(read_file, cls=SchedulerDecoder)
+                for job in job_list:
+                    self._buffer.append(job)
+                remove("buffer_json.lock")
+            except Exception as err:
+                logger.error(f"Unexpected {err=}, {type(err)=}")
+                raise
 
         if path.exists("jobs_json.lock"):
-            with open("jobs_json.lock", "r") as read_file:
-                result = json.load(read_file, cls=SchedulerDecoder)
-            self._end_jobs = set(result[0])
-            self._wrong_jobs = set(result[1])
-            remove("jobs_json.lock")
+            try:
+                with open("jobs_json.lock", "r") as read_file:
+                    result = json.load(read_file, cls=SchedulerDecoder)
+                self._end_jobs = set(result[0])
+                self._wrong_jobs = set(result[1])
+                remove("jobs_json.lock")
+            except Exception as err:
+                logger.error(f"Unexpected {err=}, {type(err)=}")
+                raise
 
         logger.debug("Lock file not found")
 
